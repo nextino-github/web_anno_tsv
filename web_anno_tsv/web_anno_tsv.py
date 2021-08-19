@@ -72,6 +72,7 @@ class IndexMapper:
     """
     To deal with special Inception string offsets. Cf Appendix B: WebAnno TSV 3.2 File format
     """
+
     def __init__(self, text):
         self.map: List[Tuple[int, int]] = []
         self.inverse: List[Tuple[int, int]] = []
@@ -86,17 +87,17 @@ class IndexMapper:
             self.map.append((start, stop))
 
             for _ in range(char_java_length):
-                self.inverse.append((i, i+1))
+                self.inverse.append((i, i + 1))
 
     @staticmethod
     def utf16_blocks(text: str):
         return len(text.encode('utf-16-le')) // 2
 
     def true_offsets(self, start: int, stop: int) -> Tuple[int, int]:
-        return self.inverse[start][0], self.inverse[stop-1][1]
+        return self.inverse[start][0], self.inverse[stop - 1][1]
 
     def java_offsets(self, start: int, stop: int) -> Tuple[int, int]:
-        return self.map[start][0], self.map[stop-1][1]
+        return self.map[start][0], self.map[stop - 1][1]
 
 
 class Reader:
@@ -157,7 +158,7 @@ class Reader:
         elif line == '':
             return None
         else:
-            return re.sub(r"\.[0-9]+", '', line[line.index('-')+1: line.index('\t')])
+            return re.sub(r"\.[0-9]+", '', line[line.index('-') + 1: line.index('\t')])
 
     @staticmethod
     def get_annotated_sentence(lines: List[str], sentence_index: int) -> AnnotatedSentence:
@@ -259,7 +260,16 @@ class Reader:
 
         # Annotations
         annotations = {}
-        if columns[4] != '_':
+        # modified for multiple features 
+        if columns[3] != '_' and '*' not in columns[3]:
+            for part in columns[3].split('|'):
+                res = re.search(r'([^[]*)(\[(\d*)\])*$', part)
+                label = res.group(1)
+                label_id = res.group(3)
+                if not label_id:
+                    label_id = str(uuid.uuid4())
+                annotations[label_id] = label
+        elif columns[4] != '_':
             for part in columns[4].split('|'):
                 res = re.search(r'([^[]*)(\[(\d*)\])*$', part)
                 label = res.group(1)
@@ -300,8 +310,8 @@ class Reader:
 
 class Writer:
     DEFAULT_HEADER = "#FORMAT=WebAnno TSV 3.2\n" \
-        "#T_SP=de.tudarmstadt.ukp.dkpro.core.api.ner.type.NamedEntity|identifier|value"
-    
+                     "#T_SP=de.tudarmstadt.ukp.dkpro.core.api.ner.type.NamedEntity|identifier|value"
+
     def __init__(self, file_path: str, overwrite=False):
         self.file_path = file_path
         self.overwrite = overwrite
@@ -337,7 +347,7 @@ class Writer:
         sentence = deepcopy(sentence)
 
         # Write text
-        self.f.write("\n".join(list(map(lambda s: "\n#Text=" + s, sentence.text.split('\n'), )))+"\n")
+        self.f.write("\n".join(list(map(lambda s: "\n#Text=" + s, sentence.text.split('\n'), ))) + "\n")
 
         # Add ID to annotations
         for annotation in sentence.annotations:
@@ -384,7 +394,7 @@ class Writer:
                         ))
 
             if not has_token_annotation:
-                span_annotations.append(SpanAnnotation(token_span,  {}))
+                span_annotations.append(SpanAnnotation(token_span, {}))
 
         token_index = 0
         sub_token_index = 0
