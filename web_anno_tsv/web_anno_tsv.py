@@ -246,7 +246,7 @@ class Reader:
             raise ReadException(message)
 
     @staticmethod
-    def read_token_line(line):
+    def read_token_line(line, column=3):
         columns = line.split('\t')
 
         # Id
@@ -261,22 +261,22 @@ class Reader:
         # Annotations
         annotations = {}
         # modified for multiple features 
-        if columns[3] != '_' and '*' not in columns[3]:
-            for part in columns[3].split('|'):
+
+        i = 0
+        while True:
+            if '*' in columns[3 + i] or columns[3 + i] == '_':
+                i += 1
+            else:
+                break
+
+        if columns[3 + i] != '_' and '*' not in columns[3 + i] and columns[3+i] != '':
+            for part in columns[3 + i].split('|'):
                 res = re.search(r'([^[]*)(\[(\d*)\])*$', part)
                 label = res.group(1)
                 label_id = res.group(3)
                 if not label_id:
                     label_id = str(uuid.uuid4())
-                annotations[label_id] = label
-        elif columns[4] != '_':
-            for part in columns[4].split('|'):
-                res = re.search(r'([^[]*)(\[(\d*)\])*$', part)
-                label = res.group(1)
-                label_id = res.group(3)
-                if not label_id:
-                    label_id = str(uuid.uuid4())
-                annotations[label_id] = label
+                annotations[label_id] = re.sub(r'\\', '', label)
 
         return SpanAnnotation(
             span=Span(
