@@ -20,7 +20,7 @@ class Annotation:
     text: str
     start: int
     stop: int
-    id: Optional[str] = None
+    id: str
 
 
 @dataclass
@@ -28,8 +28,8 @@ class Span:
     text: str
     start: int
     stop: int
+    id: str
     is_token: bool = False
-    id: Optional[str] = None
 
 
 @dataclass
@@ -230,7 +230,8 @@ class Reader:
                     label=labels[annotation_id],
                     text=sentence[start: stop],
                     start=start,
-                    stop=stop))
+                    stop=stop,
+                    id=annotation_parts[0].id))
 
             # Extract tokens
             tokens = [span for span in spans if span.is_token]
@@ -260,7 +261,7 @@ class Reader:
 
         # Annotations
         annotations = {}
-        # modified for multiple features 
+        # modified for multiple features
 
         i = 0
         while True:
@@ -278,9 +279,19 @@ class Reader:
                     label_id = str(uuid.uuid4())
                 annotations[label_id] = re.sub(r'\\', '', label)
 
+        # print(SpanAnnotation(
+        #     span=Span(
+        #         id=columns[0],
+        #         start=start,
+        #         stop=stop,
+        #         text=span_text,
+        #         is_token="." not in span_id
+        #     ),
+        #     annotations=annotations
+        # ))
         return SpanAnnotation(
             span=Span(
-                id=span_id,
+                id=columns[0],
                 start=start,
                 stop=stop,
                 text=span_text,
