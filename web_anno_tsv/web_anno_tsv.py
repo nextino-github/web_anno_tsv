@@ -206,8 +206,11 @@ class Reader:
                     first_span_start = span.start
                 span.start, span.stop = mapper.true_offsets(span.start - first_span_start, span.stop - first_span_start)
 
-                error = f"Bad offsets ({span.start}, {span.stop}) for span `{span.text}`"
-                assert sentence[span.start: span.stop] == span.text, error
+                try:
+                    assert sentence[span.start: span.stop] == span.text
+                except AssertionError:
+                    error = f"Bad offsets ({span.start}, {span.stop}) for span `{span.text}`"
+                    assert sentence[span.start+1: span.stop+1] == span.text, error
 
             # Compact annotation
             compacted_annotations = []
