@@ -271,19 +271,25 @@ class Reader:
         span_text = un_escape_text(columns[2])
 
         # Annotations
-        annotations = {}
+        ann_ = {}
         # modified for multiple features
 
         list_labels = []
         if not all(columns[3 + i] == '_' for i in range(len(columns) - 3 - 1)):
-            label_id = 0
             for i in range(len(columns) - 3 - 1):
+
                 if columns[3 + i] != '_' and not re.match(r'\*(\[\d+\])?', columns[3 + i]):
+
+                    if search_regex := re.search(r'.*\[(\d+)\]', columns[3 + i]):
+                        label_id = search_regex.group(1)
+
                     label = re.sub(r'\[\d+\]', '', columns[3 + i])
                     list_labels.append(label)
+
             list_labels = sorted(list_labels, key=lambda x: 'id' in x)
-            annotations['osefjecrois'] = '_'.join(list_labels)
-        
+            key = '_'.join([label, label_id]) if search_regex else label
+            ann_[key] = '_'.join(list_labels)
+
         # i = 0
         # while True:
         #     if '*' in columns[3 + i] or columns[3 + i] == '_':
@@ -309,7 +315,7 @@ class Reader:
         #         text=span_text,
         #         is_token="." not in span_id
         #     ),
-        #     annotations=annotations
+        #     annotations=ann_
         # ))
         return SpanAnnotation(
             span=Span(
@@ -319,7 +325,7 @@ class Reader:
                 text=span_text,
                 is_token="." not in span_id
             ),
-            annotations=annotations
+            annotations=ann_
         )
 
     def open(self):
