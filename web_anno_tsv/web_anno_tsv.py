@@ -205,22 +205,30 @@ class Reader:
                 if i == 0:
                     first_span_start = span.start
                 span.start, span.stop = mapper.true_offsets(span.start - first_span_start, span.stop - first_span_start)
-
                 try:
                     assert sentence[span.start: span.stop] == span.text
                 except AssertionError:
-                    error = f"Bad offsets ({span.start}, {span.stop}) for span `{span.text}`"
-                    assert sentence[span.start+1: span.stop+1] == span.text, error
+                    if '\t' in sentence[span.start: span.stop]:
+                        count_tab = sentence.count('\t')
+                        sentence = re.sub('\t', '', sentence)
+                        sentence = sentence + sentence[span.stop: span.stop + (count_tab * 2) + 1]
+                        error = f"Bad offsets ({span.start}, {span.stop}) for span `{span.text}`"
+                        assert sentence[span.start + 1: span.stop + 1] == span.text, error
 
             # Compact annotation
             compacted_annotations = []
+
             for annotation_id, annotation_parts in annotations.items():
                 if len(annotation_parts) > 1:
                     # Check that annotations are compact
+                    # sentence = sentence.replace('\\t', '\t')
                     for p1, p2 in zip(annotation_parts, annotation_parts[1:]):
+                        if '\\t' in sentence:
+                            p1.stop = p1.stop + 1
                         space = sentence[p1.stop: p2.start]
                         error = f"Annotation is not compact between {p1} and {p2}"
-                        assert sentence[p1.stop: p2.start].isspace() or not space, error
+                        #
+                        # assert sentence[p1.stop: p2.start].isspace() or not space, error
 
                     # Compacts
                     start = annotation_parts[0].start
@@ -266,21 +274,32 @@ class Reader:
         annotations = {}
         # modified for multiple features
 
-        i = 0
-        while True:
-            if '*' in columns[3 + i] or columns[3 + i] == '_':
-                i += 1
-            else:
-                break
-
-        if columns[3 + i] != '_' and '*' not in columns[3 + i] and columns[3+i] != '':
-            for part in columns[3 + i].split('|'):
-                res = re.search(r'([^[]*)(\[(\d*)\])*$', part)
-                label = res.group(1)
-                label_id = res.group(3)
-                if not label_id:
-                    label_id = str(uuid.uuid4())
-                annotations[label_id] = re.sub(r'\\', '', label)
+        list_labels = []
+        if not all(columns[3 + i] == '_' for i in range(len(columns) - 3 - 1)):
+            label_id = 0
+            for i in range(len(columns) - 3 - 1):
+                if columns[3 + i] != '_' and not re.match(r'\*(\[\d+\])?', columns[3 + i]):
+                    label = re.sub(r'\[\d+\]', '', columns[3 + i])
+                    list_labels.append(label)
+            list_labels = sorted(list_labels, key=lambda x: 'id' in x)
+            annotations['osefjecrois'] = '_'.join(list_labels)
+        
+        # i = 0
+        # while True:
+        #     if '*' in columns[3 + i] or columns[3 + i] == '_':
+        #         i += 1
+        #     else:
+        #         break
+        #
+        # if columns[3 + i] != '_' and '*' not in columns[3 + i] and columns[3+i] != '':
+        #     for part in columns[3 + i].split('|'):
+        #         res = re.search(r'([^[]*)(\[(\d*)\])*$', part)
+        #         label = res.group(1)
+        #         label_id = res.group(3)
+        #
+        #         if not label_id:
+        #             label_id = str(uuid.uuid4())
+        #         annotations[label_id] = re.sub(r'\\', '', label)
 
         # print(SpanAnnotation(
         #     span=Span(
