@@ -275,20 +275,21 @@ class Reader:
         # modified for multiple features
 
         list_labels = []
+        key = ""
         if not all(columns[3 + i] == '_' for i in range(len(columns) - 3 - 1)):
             for i in range(len(columns) - 3 - 1):
 
                 if columns[3 + i] != '_' and not re.match(r'\*(\[\d+\])?', columns[3 + i]):
-
-                    if search_regex := re.search(r'.*\[(\d+)\]', columns[3 + i]):
-                        label_id = search_regex.group(1)
-
                     label = re.sub(r'\[\d+\]', '', columns[3 + i])
                     list_labels.append(label)
+                    key = label
 
-            list_labels = sorted(list_labels, key=lambda x: 'id' in x)
-            key = '_'.join([label, label_id]) if search_regex else label
-            ann_[key] = '_'.join(list_labels)
+                    if search_regex := re.search(r'.*\[(\d+)\]', columns[3 + i]):
+                        key = '_'.join([label, search_regex.group(1)])
+
+            if list_labels:
+                list_labels = sorted(list_labels, key=lambda x: 'id' in x)
+                ann_[key] = '_'.join(list_labels)
 
         # i = 0
         # while True:
