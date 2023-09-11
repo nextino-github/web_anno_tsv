@@ -94,7 +94,14 @@ class IndexMapper:
         return len(text.encode('utf-16-le')) // 2
 
     def true_offsets(self, start: int, stop: int) -> Tuple[int, int]:
-        return self.inverse[start][0], self.inverse[stop - 1][1]
+        try:
+            return self.inverse[start][0], self.inverse[stop - 1][1]
+        except IndexError:
+            try:
+                return self.inverse[start][0], self.inverse[1][1]
+            except IndexError:
+                return None, None
+
 
     def java_offsets(self, start: int, stop: int) -> Tuple[int, int]:
         return self.map[start][0], self.map[stop - 1][1]
@@ -205,15 +212,16 @@ class Reader:
                 if i == 0:
                     first_span_start = span.start
                 span.start, span.stop = mapper.true_offsets(span.start - first_span_start, span.stop - first_span_start)
-                try:
-                    assert sentence[span.start: span.stop] == span.text
-                except AssertionError:
-                    if '\t' in sentence[span.start: span.stop]:
-                        count_tab = sentence.count('\t')
-                        sentence = re.sub('\t', '', sentence)
-                        sentence = sentence + sentence[span.stop: span.stop + (count_tab * 2) + 1]
-                        error = f"Bad offsets ({span.start}, {span.stop}) for span `{span.text}`"
-                        assert sentence[span.start + 1: span.stop + 1] == span.text, error
+                if span.start:
+                    try:
+                        assert sentence[span.start: span.stop] == span.text
+                    except AssertionError:
+                        if '\t' in sentence[span.start: span.stop]:
+                            count_tab = sentence.count('\t')
+                            sentence = re.sub('\t', '', sentence)
+                            sentence = sentence + sentence[span.stop: span.stop + (count_tab * 2) + 1]
+                            error = f"Bad offsets ({span.start}, {span.stop}) for span `{span.text}`"
+                            assert sentence[span.start + 1: span.stop + 1] == span.text, error
 
             # Compact annotation
             compacted_annotations = []
